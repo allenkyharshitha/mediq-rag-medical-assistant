@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediQ - AI Medical Assistant</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; }
+        .header { background: #2c5f8a; color: white; padding: 15px 20px; }
+        .header h1 { font-size: 20px; }
+        .header p { font-size: 12px; opacity: 0.8; }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; height: calc(100vh - 60px); }
+
+        .left-panel { display: flex; flex-direction: column; gap: 10px; }
+        .profile-card { background: white; border-radius: 10px; padding: 15px; }
+        .profile-card h3 { font-size: 14px; color: #2c5f8a; margin-bottom: 10px; }
+        .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .profile-grid input, .profile-grid select {
+            padding: 6px 10px; border: 1px solid #ddd;
+            border-radius: 6px; font-size: 12px; width: 100%;
+        }
+        .profile-grid input:focus, .profile-grid select:focus {
+            outline: none; border-color: #2c5f8a;
+        }
+        label { font-size: 11px; color: #666; }
+
+        .chat-card { background: white; border-radius: 10px; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .chat-header { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 14px; font-weight: bold; color: #2c5f8a; }
+        .chat-body { height: calc(100vh - 350px); overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+        .msg-user { align-self: flex-end; background: #2c5f8a; color: white; }
+        .msg-bot { align-self: flex-start; background: #f0f2f5; color: #333; }
+        .msg-emergency { background: #fee2e2; color: #dc2626; border: 1px solid #dc2626; }
+        .chat-input { padding: 12px; border-top: 1px solid #eee; display: flex; gap: 8px; }
+        .chat-input input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+        .chat-input button { background: #2c5f8a; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .chat-input button:hover { background: #1e4a6e; }
+        .typing { color: #999; font-size: 12px; font-style: italic; }
+        .disclaimer { background: #fff8e1; border-left: 3px solid #f59e0b; padding: 8px 12px; font-size: 11px; color: #854d0e; margin: 0 0 10px 0; border-radius: 0 6px 6px 0; }
+
+        .right-panel { display: flex; flex-direction: column; gap: 10px; }
+        .card { background: white; border-radius: 10px; padding: 15px; }
+        .card h3 { font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+
+        .urgency-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .urgency-item { padding: 8px; border-radius: 8px; text-align: center; opacity: 0.4; transition: opacity 0.3s; }
+        .urgency-item.active { opacity: 1; }
+        .u-low { background: #dcfce7; color: #166534; }
+        .u-moderate { background: #fef9c3; color: #854d0e; }
+        .u-high { background: #fee2e2; color: #dc2626; }
+        .urgency-label { font-size: 12px; font-weight: bold; }
+        .urgency-sub { font-size: 10px; margin-top: 3px; }
+        .urgency-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+        .urgency-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+
+        .conf-number { font-size: 28px; font-weight: bold; color: #2c5f8a; }
+        .conf-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+        .conf-fill { height: 100%; background: #2c5f8a; border-radius: 4px; transition: width 0.5s; }
+        .conf-desc { font-size: 11px; color: #666; margin-top: 6px; }
+
+        .rec-box { display: flex; align-items: center; gap: 12px; }
+        .rec-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .rec-text { font-size: 13px; font-weight: bold; }
+        .rec-sub { font-size: 11px; color: #666; margin-top: 3px; }
+
+        .source-item { font-size: 11px; color: #2c5f8a; padding: 6px; background: #f9f9f9; border-radius: 6px; margin-bottom: 5px; cursor: pointer; }
+        .source-item:hover { background: #e8f0fe; }
+
+        .option-btn {
+            display: inline-block;
+            margin: 3px 4px 3px 0;
+            padding: 5px 12px;
+            background: #e8f0fe;
+            color: #2c5f8a;
+            border: 1px solid #2c5f8a;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .option-btn:hover { background: #2c5f8a; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MediQ — AI Medical Assistant</h1>
+        <p>AI-powered medical Q&A with RAG | Not a substitute for professional medical advice</p>
+    </div>
+
+    <div class="container">
+        <div class="left-panel">
+            <div class="profile-card">
+                <h3>Patient Profile</h3>
+                <div class="profile-grid">
+                    <div>
+                        <label>Name</label>
+                        <input type="text" id="name" placeholder="Your name" />
+                    </div>
+                    <div>
+                        <label>Age</label>
+                        <input type="number" id="age" placeholder="Age" />
+                    </div>
+                    <div>
+                        <label>Gender</label>
+                        <select id="gender">
+                            <option value="">Select</option>
+                            <option>Male</option>
+                            <option>Female</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Known Conditions</label>
+                        <select id="conditions-select" onchange="handleConditionSelect(this.value)">
+                            <option value="">Select condition</option>
+                            <option value="Diabetes">Diabetes</option>
+                            <option value="Hypertension">Hypertension</option>
+                            <option value="Asthma">Asthma</option>
+                            <option value="Heart Disease">Heart Disease</option>
+                            <option value="Arthritis">Arthritis</option>
+                            <option value="Cancer">Cancer</option>
+                            <option value="Kidney Disease">Kidney Disease</option>
+                            <option value="Thyroid Disorder">Thyroid Disorder</option>
+                            <option value="Anxiety/Depression">Anxiety/Depression</option>
+                            <option value="other">Other (type below)</option>
+                        </select>
+                        <input type="text" id="conditions" placeholder="Type your condition..." style="display:none; margin-top:5px"/>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-card">
+                <div class="chat-header">Chat with MediQ</div>
+                <div class="chat-body" id="chat-body">
+                    <div class="msg msg-bot">Hi! I'm <strong>MediQ</strong>, your AI medical assistant. Ask me about your symptoms or any medical question.</div>
+                    <div class="disclaimer">⚠️ MediQ is an AI assistant. Responses are informational only — always consult a qualified doctor for medical decisions.</div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="user-input" placeholder="Describe your symptoms..." onkeypress="if(event.key==='Enter') sendMessage()" />
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="card">
+                <h3>Urgency Level</h3>
+                <div class="urgency-grid">
+                    <div class="urgency-item u-low" id="u-low">
+                        <div class="urgency-label">Low</div>
+                        <div class="urgency-sub">Monitor at home</div>
+                    </div>
+                    <div class="urgency-item u-moderate" id="u-moderate">
+                        <div class="urgency-label">Moderate</div>
+                        <div class="urgency-sub">Visit if worsens</div>
+                    </div>
+                    <div class="urgency-item u-high" id="u-high">
+                        <div class="urgency-label">High</div>
+                        <div class="urgency-sub">See doctor now</div>
+                    </div>
+                </div>
+                <div class="urgency-bar">
+                    <div class="urgency-fill" id="urgency-fill" style="width:0%; background:#2c5f8a;"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Retrieval Confidence</h3>
+                <div class="conf-number" id="conf-number">--%</div>
+                <div class="conf-bar">
+                    <div class="conf-fill" id="conf-fill" style="width:0%"></div>
+                </div>
+                <div class="conf-desc" id="conf-desc">Ask a question to see confidence score</div>
+            </div>
+
+            <div class="card">
+                <h3>Doctor Visit Recommendation</h3>
+                <div class="rec-box" id="rec-box">
+                    <div class="rec-icon" id="rec-icon" style="background:#f0f2f5;">🩺</div>
+                    <div>
+                        <div class="rec-text" id="rec-text">Ask a question to get recommendation</div>
+                        <div class="rec-sub" id="rec-sub"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Retrieved Sources</h3>
+                <div id="sources-body">
+                    <div class="source-item">Sources will appear here after your question</div>
+                </div>
+            </div>
+
+            <div class="card" style="background:#f0f7ff; border-left: 3px solid #2c5f8a; border-radius:0 10px 10px 0;">
+                <h3 style="color:#2c5f8a">Quick Tips</h3>
+                <p style="font-size:12px; color:#444; line-height:1.7; margin-top:6px">
+                    • Be specific about your symptoms<br>
+                    • Mention duration and severity<br>
+                    • Include any medications you take<br>
+                    • Click retrieved sources to explore related questions<br>
+                    • Always consult a doctor for serious concerns
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.MEDIQ_HOST = '/rnode/p0220.ten.osc.edu/5000';
+        let currentSymptom = '';
+        let followupQuestions = [];
+        let currentQuestionIndex = 0;
+        let collectedAnswers = {};
+
+        function handleConditionSelect(value) {
+            const input = document.getElementById('conditions');
+            if (value === 'other') {
+                input.style.display = 'block';
+                input.focus();
+            } else {
+                input.style.display = 'none';
+                input.value = value;
+            }
+        }
+
+        function getProfile() {
+            const selectVal = document.getElementById('conditions-select').value;
+            const inputVal = document.getElementById('conditions').value;
+            const conditions = selectVal === 'other' ? inputVal : (selectVal || inputVal || 'None');
+            return {
+                name: document.getElementById('name').value || 'Unknown',
+                age: document.getElementById('age').value || 'Unknown',
+                gender: document.getElementById('gender').value || 'Unknown',
+                conditions: conditions
+            };
+        }
+
+        function addMessage(text, isUser, isEmergency=false) {
+            const body = document.getElementById('chat-body');
+            const div = document.createElement('div');
+            div.className = 'msg ' + (isUser ? 'msg-user' : (isEmergency ? 'msg-emergency' : 'msg-bot'));
+            div.innerHTML = text;
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight;
+            return div;
+        }
+
+        function addQuestionBubble(question, options, isMulti, questionIndex) {
+            const body = document.getElementById('chat-body');
+            const div = document.createElement('div');
+            div.className = 'msg msg-bot';
+            div.id = 'question-bubble';
+            div.style.maxWidth = '90%';
+
+            const q = document.createElement('p');
+            q.style.marginBottom = '10px';
+            q.style.fontWeight = 'bold';
+            q.textContent = question;
+            div.appendChild(q);
+
+            const selectedOptions = [];
+
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.textContent = option;
+                btn.className = 'option-btn';
+                btn.onclick = () => {
+                    if (isMulti) {
+                        if (selectedOptions.includes(option)) {
+                            selectedOptions.splice(selectedOptions.indexOf(option), 1);
+                            btn.style.background = '#e8f0fe';
+                            btn.style.color = '#2c5f8a';
+                        } else {
+                            selectedOptions.push(option);
+                            btn.style.background = '#2c5f8a';
+                            btn.style.color = 'white';
+                        }
+                    } else {
+                        handleOptionSelect(option, questionIndex);
+                    }
+                };
+                div.appendChild(btn);
+            });
+
+            if (isMulti) {
+                const confirmBtn = document.createElement('button');
+                confirmBtn.textContent = 'Confirm Selection';
+                confirmBtn.className = 'option-btn';
+                confirmBtn.style.background = '#1e4a6e';
+                confirmBtn.style.color = 'white';
+                confirmBtn.style.marginTop = '8px';
+                confirmBtn.style.display = 'block';
+                confirmBtn.onclick = () => {
+                    const answer = selectedOptions.length > 0 ? selectedOptions.join(', ') : 'None';
+                    handleOptionSelect(answer, questionIndex);
+                };
+                div.appendChild(confirmBtn);
+            }
+
+            const typeDiv = document.createElement('div');
+            typeDiv.style.marginTop = '10px';
+            typeDiv.style.display = 'flex';
+            typeDiv.style.gap = '6px';
+            const typeInput = document.createElement('input');
+            typeInput.type = 'text';
+            typeInput.placeholder = 'Or type your answer...';
+            typeInput.style.cssText = 'flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;';
+            const typeBtn = document.createElement('button');
+            typeBtn.textContent = 'Send';
+            typeBtn.style.cssText = 'background:#2c5f8a;color:white;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;';
+            typeBtn.onclick = () => {
+                if (typeInput.value.trim()) handleOptionSelect(typeInput.value.trim(), questionIndex);
+            };
+            typeInput.onkeypress = (e) => {
+                if (e.key === 'Enter' && typeInput.value.trim()) handleOptionSelect(typeInput.value.trim(), questionIndex);
+            };
+            typeDiv.appendChild(typeInput);
+            typeDiv.appendChild(typeBtn);
+            div.appendChild(typeDiv);
+
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function handleOptionSelect(answer, questionIndex) {
+            const question = followupQuestions[questionIndex].question;
+            collectedAnswers[question] = answer;
+
+            const bubble = document.getElementById('question-bubble');
+            if (bubble) bubble.remove();
+
+            addMessage(answer, true);
+
+            currentQuestionIndex++;
+            if (currentQuestionIndex < followupQuestions.length) {
+                const next = followupQuestions[currentQuestionIndex];
+                addQuestionBubble(next.question, next.options, next.multi || false, currentQuestionIndex);
+            } else {
+                getFinalAnswer();
+            }
+        }
+
+        async function getFinalAnswer() {
+            const typing = document.createElement('div');
+            typing.className = 'msg msg-bot typing';
+            typing.id = 'typing';
+            typing.textContent = 'MediQ is analyzing your responses...';
+            document.getElementById('chat-body').appendChild(typing);
+            document.getElementById('chat-body').scrollTop = document.getElementById('chat-body').scrollHeight;
+
+            try {
+                const response = await fetch(window.MEDIQ_HOST + '/answer_followup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symptom: currentSymptom,
+                        answers: collectedAnswers,
+                        profile: getProfile()
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('typing').remove();
+                addMessage(data.response, false, data.urgency === 'HIGH');
+                updateDashboard(data);
+            } catch (err) {
+                document.getElementById('typing').remove();
+                addMessage('Error connecting to server. Please try again.', false);
+            }
+        }
+
+        function updateDashboard(data) {
+            document.getElementById('conf-number').textContent = data.confidence + '%';
+            document.getElementById('conf-fill').style.width = data.confidence + '%';
+            let confDesc = 'Low confidence - consult a doctor';
+            if (data.confidence > 70) confDesc = 'High match in medical database';
+            else if (data.confidence > 40) confDesc = 'Moderate match found';
+            document.getElementById('conf-desc').textContent = confDesc;
+
+            document.getElementById('u-low').classList.remove('active');
+            document.getElementById('u-moderate').classList.remove('active');
+            document.getElementById('u-high').classList.remove('active');
+            let fillWidth = 33, fillColor = '#16a34a';
+            if (data.urgency === 'LOW') {
+                document.getElementById('u-low').classList.add('active');
+                fillWidth = 25; fillColor = '#16a34a';
+            } else if (data.urgency === 'MODERATE') {
+                document.getElementById('u-moderate').classList.add('active');
+                fillWidth = 60; fillColor = '#ca8a04';
+            } else {
+                document.getElementById('u-high').classList.add('active');
+                fillWidth = 100; fillColor = '#dc2626';
+            }
+            document.getElementById('urgency-fill').style.width = fillWidth + '%';
+            document.getElementById('urgency-fill').style.background = fillColor;
+
+            const recMap = {
+                'LOW':      { icon: '✅', bg: '#dcfce7', text: 'Home care is sufficient',      sub: 'Monitor symptoms and rest' },
+                'MODERATE': { icon: '⏰', bg: '#fef9c3', text: 'Visit doctor within 48 hours', sub: 'If symptoms worsen, seek care sooner' },
+                'HIGH':     { icon: '🚨', bg: '#fee2e2', text: 'See a doctor immediately',     sub: 'Do not delay medical attention' },
+                'INFO':     { icon: 'ℹ️', bg: '#e0f2fe', text: 'Informational query',          sub: 'No medical action required' }
+            };
+            const rec = recMap[data.urgency] || recMap['INFO'];
+            document.getElementById('rec-icon').textContent = rec.icon;
+            document.getElementById('rec-icon').style.background = rec.bg;
+            document.getElementById('rec-text').textContent = rec.text;
+            document.getElementById('rec-sub').textContent = data.urgency_reason;
+
+            const sourcesBody = document.getElementById('sources-body');
+            sourcesBody.innerHTML = '';
+            if (data.sources && data.sources.length > 0) {
+                data.sources.forEach((src, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'source-item';
+                    const question = src.startsWith('Question:') ? src.split('\n')[0].replace('Question: ', '') : src.substring(0, 80);
+                    div.textContent = (i+1) + '. ' + question;
+                    div.title = 'Click to ask this question';
+                    div.onclick = () => {
+                        document.getElementById('user-input').value = question;
+                        sendMessage();
+                    };
+                    sourcesBody.appendChild(div);
+                });
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const query = input.value.trim();
+            if (!query) return;
+
+            addMessage(query, true);
+            input.value = '';
+
+            currentSymptom = query;
+            currentQuestionIndex = 0;
+            collectedAnswers = {};
+            followupQuestions = [];
+
+            const typing = document.createElement('div');
+            typing.className = 'msg msg-bot typing';
+            typing.id = 'typing';
+            typing.textContent = 'MediQ is thinking...';
+            document.getElementById('chat-body').appendChild(typing);
+            document.getElementById('chat-body').scrollTop = document.getElementById('chat-body').scrollHeight;
+
+            try {
+                const response = await fetch('window.MEDIQ_HOST + '/start_followup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symptom: query, profile: getProfile() })
+                });
+                const data = await response.json();
+                document.getElementById('typing').remove();
+
+                if (data.emergency) {
+                    addMessage(data.response, false, true);
+                    updateDashboard(data);
+                    return;
+                }
+
+                if (data.questions && data.questions.length > 0) {
+                    followupQuestions = data.questions;
+                    addMessage('Before I answer, let me ask a few quick questions for better clarity.', false);
+                    addQuestionBubble(
+                        followupQuestions[0].question,
+                        followupQuestions[0].options,
+                        followupQuestions[0].multi || false,
+                        0
+                    );
+                } else {
+                    const res = await fetch('window.MEDIQ_HOST + '/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: query, profile: getProfile() })
+                    });
+                    const result = await res.json();
+                    addMessage(result.response, false, result.urgency === 'HIGH');
+                    updateDashboard(result);
+                }
+            } catch (err) {
+                document.getElementById('typing').remove();
+                addMessage('Error connecting to server. Please try again.', false);
+            }
+        }
+    </script>
+</body>
+</html>

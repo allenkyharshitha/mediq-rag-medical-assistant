@@ -190,6 +190,8 @@ https://ondemand.osc.edu/rnode/<NODE_NAME>/5000/
 
 
 ## Author
-Bhanu Prasad Dharavathu
+Harshitha Naidu Allenky
+Master's in Computer Science 
+
 
 
